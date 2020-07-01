@@ -35,10 +35,14 @@ def main():
 
             # loop detection
             while True:
-                frame = video_stream.read()
+                distances=[]
+                depth_image,color_image = video_stream.read()
+                video_stream.roi(depth_image,color_image,min=None,max=0.9,shade=0) 
                 results = obj_detect.detect_objects(frame, confidence_level=.6)
                 frame = edgeiq.markup_image(
                         frame, results.predictions, colors=obj_detect.colors)
+                for predictions in results.predictions:
+                    distances.append(video_stream.compute_object_distance(prediction.box,depth_image))
 
                 # Generate text to display on streamer
                 text = ["Model: {}".format(obj_detect.model_id)]
@@ -46,11 +50,11 @@ def main():
                         "Inference time: {:1.3f} s".format(results.duration))
                 text.append("Objects:")
 
-                for prediction in results.predictions:
-                    text.append("{}: {:2.2f}%".format(
-                        prediction.label, prediction.confidence * 100))
+                for i,prediction in enumerate(results.predictions):
+                    text.append("{}: {:2.2f}% meters".format(
+                        prediction.label, prediction.confidence * 100,distances[i]))
 
-                streamer.send_data(frame, text)
+                streamer.send_data(roi, text)
 
                 fps.update()
 
